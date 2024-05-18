@@ -2,13 +2,31 @@
 
 use App\Http\Controllers\StatusTaskController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/images/{arquivo}', function ($imagem) {
+    $path = storage_path("app/images/$imagem");
+    // Verificando se o arquivo existe
+    if (!file_exists($path)) {
+        abort(404);
+    }
+    // Retornando a imagem com o tipo MIME correto
+    $mime = mime_content_type($path);
+    return response()->file($path, ['Content-Type' => $mime]);
+});
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+
+    Route::prefix('/users')->group(function () {
+        Route::get('/', [UserController::class, 'index']);
+        Route::post('/{id}', [UserController::class, 'update']);
+    });
+
     Route::apiResources([
         'tasks' => TaskController::class,
     ]);
