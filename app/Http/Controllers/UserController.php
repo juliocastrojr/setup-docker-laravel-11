@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UserUpdateRequest;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
@@ -52,34 +55,54 @@ class UserController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UserUpdateRequest $request, int $id)
+    public function update(UserUpdateRequest $request, int $id): JsonResponse
     {
         try {
+            $user = User::findOrFail($id);
 
             if ($request->hasFile('imagem_profile')) {
-                $imagem = $request->file('imagem_profile');
-                $nomeImagem = time() . '.' . $imagem->getClientOriginalExtension();
-                $imagem->storeAs('images', $nomeImagem);
-                $imagePath = "api/images/".$nomeImagem;
-                $request->merge([
-                    'photo' => $nomeImagem, 
-                    "path_image" => asset($imagePath)
-                ]);
+                $this->deleteExistingPhoto($user);
+                $photoDetails = $this->storeNewPhoto($request->file('imagem_profile'));
+                $request->merge($photoDetails);
             }
 
-            User::find($id)->update($request->all());
+            $user->update($request->all());
 
             return response()->json([
                 "success" => true,
                 "message" => "Usuário atualizado com sucesso!"
             ]);
-
         } catch (\Exception $e) {
+            Log::error('Error updating user: ' . $e->getMessage(), [
+                'user_id' => $id,
+                'request' => $request->all(),
+                'exception' => $e
+            ]);
+
             return response()->json([
                 "success" => false,
-                "message" => $e->getMessage()
-            ]);
+                "message" => "Ocorreu um erro ao atualizar o usuário."
+            ], 500);
         }
+    }
+
+    private function deleteExistingPhoto(User $user): void
+    {
+        if ($user->photo) {
+            Storage::delete('images/' . $user->photo);
+        }
+    }
+
+    private function storeNewPhoto($image): array
+    {
+        $imageName = time() . '.' . $image->getClientOriginalExtension();
+        $image->storeAs('images', $imageName);
+        $imagePath = asset("api/images/" . $imageName);
+
+        return [
+            'photo' => $imageName,
+            'path_image' => $imagePath
+        ];
     }
 
     /**
