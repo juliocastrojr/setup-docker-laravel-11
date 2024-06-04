@@ -4,17 +4,26 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\TaskUpdateRequest;
 use App\Models\Task;
+use App\Repositories\TaskRepository;
 use Illuminate\Http\Request;
 
 class TaskController extends Controller
 {
+
+    private $taskRepository;
+
+    public function __construct(TaskRepository $taskRepository)
+    {
+        $this->taskRepository = $taskRepository;
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        $tasks = new Task();
-        return response()->json($tasks->with(['user', 'status'])->get());
+        $tasks = $this->taskRepository->getAllWithPaginate(10, ['user', 'status']);
+        return response()->json($tasks);
     }
 
     /**

@@ -10,9 +10,9 @@ class UnidadeController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Unidade $unidade)
     {
-        //
+        return response()->json($unidade->all());
     }
 
     /**
